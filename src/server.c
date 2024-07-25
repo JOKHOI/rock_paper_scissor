@@ -1,4 +1,5 @@
 #include "../include/server.h"
+#include "../include/game.h"
 #define MAX_PLAYER 2
 
 // Function to create a socket and return its file descriptor
@@ -73,25 +74,25 @@ void ioMultiplexing(int *socketFd) {
         // Add client sockets to set
         for (int i = 0; i < MAX_PLAYER; i++) {
             if (client_socket[i] != 0)
-                FD_SET(client_socket[i], &readfds);
+                FD_SET(client_socket[i], &readfds); // Add each active client socket to the set
 
             if (client_socket[i] > max_fd)
-                max_fd = client_socket[i];
+                max_fd = client_socket[i]; // Update the maximum file descriptor number
         }
 
         // Wait for an activity on one of the sockets
         readyfds = select(max_fd + 1, &readfds, NULL, NULL, NULL);
 
         if ((readyfds < 0) && (errno != EINTR)) {
-            printf("select error");
+            printf("select error"); // Print an error message if select fails
         }
 
         // Check if there's an incoming connection on the server socket
         if (FD_ISSET(*socketFd, &readfds)) {
             int new_socket;
             if ((new_socket = accept(*socketFd, (struct sockaddr *)&address, &addrlen)) < 0) {
-                perror("accept");
-                exit(EXIT_FAILURE);
+                perror("accept"); // Print an error message if accept fails
+                exit(EXIT_FAILURE); // Exit the program if accept fails
             }
 
             // Inform about the new connection
@@ -100,7 +101,7 @@ void ioMultiplexing(int *socketFd) {
             // Add new socket to client socket array
             for (int i = 0; i < MAX_PLAYER; i++) {
                 if (client_socket[i] == 0) {
-                    client_socket[i] = new_socket;
+                    client_socket[i] = new_socket; // Store the new client socket
                     active_connections++;
                     break;
                 }
@@ -108,11 +109,11 @@ void ioMultiplexing(int *socketFd) {
         }
 
         // Handle I/O operations on client sockets
-        for (int i = 0; i < MAX_PLAYER; i++) { // Corrected loop limit to MAX_PLAYER
-            int sd = client_socket[i];
+        for (int i = 0; i < MAX_PLAYER; i++) { // Iterate over all possible clients
+            int sd = client_socket[i]; // Get the client socket descriptor
             if (sd != 0 && FD_ISSET(sd, &readfds)) {
-                memset(inBuffer[i], 0, 1024);
-                memset(outBuffer[i], 0, 1024);
+                memset(inBuffer[i], 0, 1024); // Clear the input buffer for the client
+                memset(outBuffer[i], 0, 1024); // Clear the output buffer for the client
 
                 // Read data from the client socket
                 int valread = read(sd, inBuffer[i], 1024);
@@ -124,19 +125,23 @@ void ioMultiplexing(int *socketFd) {
                         // Error occurred
                         fprintf(stderr, "Read error: %s (code: %d)\n", strerror(errno), errno);
                     }
-                    close(sd);
-                    client_socket[i] = 0;
+                    close(sd); // Close the client socket
+                    client_socket[i] = 0; // Mark the client socket as inactive
                 } else {
                     // Echo back the message to other clients
-                    inBuffer[i][valread] = '\0';
-                    printf("%s: %s", inet_ntoa(address.sin_addr), inBuffer[i]);
-                    strncpy(outBuffer[i], inet_ntoa(address.sin_addr), INET_ADDRSTRLEN);
+                    inBuffer[i][valread] = '\0'; // Null-terminate the received data
+                    printf("client%d: %s", i, inBuffer[i]); // Print the received message
+                    char tempBuffer[1024];
+                    snprintf(tempBuffer, sizeof(tempBuffer), "client%d", i);
+                    strcat(outBuffer[i], tempBuffer);
                     strcat(outBuffer[i], " : ");
                     strcat(outBuffer[i], inBuffer[i]);
+                    //write to the other clients
+                    for (int j = 0; j < MAX_PLAYER; j++) { // Iterate over all possible clients
+                        if (client_socket[j] != 0 ) {
+                            
 
-                    for (int j = 0; j < MAX_PLAYER; j++) { // Corrected loop limit to MAX_PLAYER
-                        if (client_socket[j] != 0 && i != j) {
-                            write(client_socket[j], outBuffer[i], strlen(outBuffer[i]));
+                            write(client_socket[j],"hi\n", 4); // Send the message to other clients
                         }
                     }
                 }

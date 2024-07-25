@@ -1,10 +1,10 @@
 # Step 1: Define variables for later use
 CC = gcc                # Set the compiler to gcc
-CFLAGS = -Wall -g       # Set compiler flags to show all warnings and include debug info
-TARGET = main           # Set the name of the output executable to 'main'
+CFLAGS = -g       # Set compiler flags to show all warnings and include debug info
+TARGET = client           # Set the name of the output executable to 'main'
 
 # Step 2: List source files needed for the project
-SRCS = main.c src/game.c # List of source files to compile
+SRCS = client_main.c src/client.c # List of source files to compile
 
 # Step 3: Define the default action (what happens when you type 'make')
 all: build run          # The 'all' target depends on building the program and then running it
