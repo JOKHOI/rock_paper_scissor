@@ -3,7 +3,7 @@
 #include<time.h>
 #include<string.h>
 #include "include/game.h"
-
+#include "include/client.h"
 
 
 
@@ -14,6 +14,10 @@ int main(void)
 	player P2={0,0};
 	player *AI   = &P1;
 	player *User = &P2; 
+	int socketFd;
+	int *pointerSocket = &socketFd;
+	struct sockaddr_in address;
+	struct sockaddr_in *ptrAddress=&address ;
 	srand(time(NULL));
 	char input[10];
 	int state;
@@ -49,8 +53,14 @@ int main(void)
 					
 				
 					printf("\n\n===================================\n");
-					printf("\n		ROUND %d		\n");
+					printf("\n		ROUND %d		\n",i);
 					printf("\n\n===================================\n");
+					printf("Enter : rock,paper,scissor  \n");
+					createSocket(pointerSocket);
+					serverSetup(ptrAddress);
+					startConnect(pointerSocket,ptrAddress);
+					startListen(pointerSocket);
+					return 0 ;
 					i++;	
 
 		}

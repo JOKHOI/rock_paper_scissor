@@ -11,6 +11,15 @@
 #include<sys/time.h>
 #include <sys/select.h>
 #include <sys/time.h>
+
+typedef struct {
+	int socket;
+    char hand[1024];	
+    int ready;
+	int score;
+}client;
+
+
 int createSocket(int *socketFd);
 void attachSocket(int *socketFd);
 void configureServerAddr(struct sockaddr_in *address);

@@ -51,17 +51,50 @@ void startListen(int *socketFd)
     }
 }
 
+void evaluateHand(client player[], int clientCount )
+{
+    if (clientCount < 2){
+        return;
+    }
+    
+    if (player[0].ready == 1 && player[1].ready == 1){
+        char *result1;
+        char *result2;
+        if(strcmp(player[0].hand, player[1].hand) == 0)
+        {
+            result1 = "\n\t===Draw===\n";
+            result2 = "\n\t===Draw===\n";
+        }
+        else if (strcmp(player[0].hand , "rock")==0 && strcmp(player[1].hand , "scissor")==0 || strcmp(player[0].hand , "paper")==0 && strcmp(player[1].hand , "rock")==0 || strcmp(player[0].hand , "scissor")==0 && strcmp(player[1].hand , "paper")==0)
+        {
+            player[0].score += 1;
+            result1 = "\t===You Win===\n";
+            result2 = "\t===You Lose===\n";
+        }
+        else 
+        {
+            player[1].score += 1;
+            result1 = "\t===You Lose===\n";
+            result2 = "\t===You Win===\n";
+        }
+    
+        write(player[0].socket, result1, strlen(result1));
+        write(player[1].socket, result2, strlen(result2));
+
+        player[0].ready = 0;
+        player[1].ready = 0;
+    }
+}
+
+
 // Function to handle I/O multiplexing using select()
 // It monitors multiple client connections to handle incoming data and new connections
 void ioMultiplexing(int *socketFd) {
     fd_set readfds; // Set of file descriptors to monitor for read operations
     int max_fd, readyfds, active_connections = 0;
-    int client_socket[MAX_PLAYER] = {0}; // Array to hold client socket file descriptors
     struct sockaddr_in address;
     socklen_t addrlen = sizeof(address);
-    char inBuffer[MAX_PLAYER][1024]; // Buffers for incoming data
-    char outBuffer[MAX_PLAYER][1024]; // Buffers for outgoing data
-
+    client player[MAX_PLAYER]={{0}};
     // Server loop to continuously monitor and handle I/O operations
     while (1) {
         // Clear the socket set
@@ -73,11 +106,11 @@ void ioMultiplexing(int *socketFd) {
 
         // Add client sockets to set
         for (int i = 0; i < MAX_PLAYER; i++) {
-            if (client_socket[i] != 0)
-                FD_SET(client_socket[i], &readfds); // Add each active client socket to the set
+            if (player[i].socket != 0)
+                FD_SET(player[i].socket, &readfds); // Add each active client socket to the set
 
-            if (client_socket[i] > max_fd)
-                max_fd = client_socket[i]; // Update the maximum file descriptor number
+            if (player[i].socket > max_fd)
+                max_fd = player[i].socket; // Update the maximum file descriptor number
         }
 
         // Wait for an activity on one of the sockets
@@ -100,8 +133,8 @@ void ioMultiplexing(int *socketFd) {
 
             // Add new socket to client socket array
             for (int i = 0; i < MAX_PLAYER; i++) {
-                if (client_socket[i] == 0) {
-                    client_socket[i] = new_socket; // Store the new client socket
+                if (player[i].socket == 0) {
+                    player[i].socket = new_socket; // Store the new client socket
                     active_connections++;
                     break;
                 }
@@ -110,13 +143,11 @@ void ioMultiplexing(int *socketFd) {
 
         // Handle I/O operations on client sockets
         for (int i = 0; i < MAX_PLAYER; i++) { // Iterate over all possible clients
-            int sd = client_socket[i]; // Get the client socket descriptor
+            int sd = player[i].socket; // Get the client socket descriptor
             if (sd != 0 && FD_ISSET(sd, &readfds)) {
-                memset(inBuffer[i], 0, 1024); // Clear the input buffer for the client
-                memset(outBuffer[i], 0, 1024); // Clear the output buffer for the client
-
+                char buffer[1024] = {0};
                 // Read data from the client socket
-                int valread = read(sd, inBuffer[i], 1024);
+                int valread = read(sd, buffer, 1024);
                 if (valread <= 0) {
                     if (valread == 0) {
                         // Client disconnected
@@ -126,26 +157,21 @@ void ioMultiplexing(int *socketFd) {
                         fprintf(stderr, "Read error: %s (code: %d)\n", strerror(errno), errno);
                     }
                     close(sd); // Close the client socket
-                    client_socket[i] = 0; // Mark the client socket as inactive
+                    player[i].socket = 0; // Mark the client socket as inactive
                 } else {
-                    // Echo back the message to other clients
-                    inBuffer[i][valread] = '\0'; // Null-terminate the received data
-                    printf("client%d: %s", i, inBuffer[i]); // Print the received message
-                    char tempBuffer[1024];
-                    snprintf(tempBuffer, sizeof(tempBuffer), "client%d", i);
-                    strcat(outBuffer[i], tempBuffer);
-                    strcat(outBuffer[i], " : ");
-                    strcat(outBuffer[i], inBuffer[i]);
-                    //write to the other clients
-                    for (int j = 0; j < MAX_PLAYER; j++) { // Iterate over all possible clients
-                        if (client_socket[j] != 0 ) {
-                            
-
-                            write(client_socket[j],"hi\n", 4); // Send the message to other clients
-                        }
+                         buffer[valread] = '\0';
+                         strncpy(player[i].hand, buffer, sizeof(buffer));
+                         player[i].ready = 1;
+                         printf("Player %d: %s\n", i, player[i].hand);
+                         for(int j=0; j<MAX_PLAYER; j++){
+                            if(player[j].socket != 0){
+                                evaluateHand(player, MAX_PLAYER);
+                         }
+                         
                     }
                 }
             }
         }
     }
+
 }
