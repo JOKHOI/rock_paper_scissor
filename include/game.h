@@ -5,7 +5,8 @@
 #define SCISSOR 2
 
 typedef struct {
-	int hand;	
+	int hand;
+	char buffer[1024];
 	int score;
 }player;
 
