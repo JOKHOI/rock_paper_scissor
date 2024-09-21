@@ -34,7 +34,7 @@ void serverSetup(struct sockaddr_in *address)
     address->sin_port = htons(PORT);  // Set the port number, converting it to network byte order
 
     // Convert the IP address from text to binary form and store it in address->sin_addr
-    if (inet_pton(AF_INET, "192.168.2.240", &address->sin_addr) <= 0) {
+    if (inet_pton(AF_INET, "192.168.88.124", &address->sin_addr) <= 0) {
         // Print an error message and exit if the address conversion fails
         perror("Invalid address");
         exit(EXIT_FAILURE);
